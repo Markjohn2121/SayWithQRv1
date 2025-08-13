@@ -592,6 +592,8 @@ export default function QrArtStudio() {
         
         qrCodeDataUrl = await drawCustomQr(qrData, design, design.useImage ? backgroundImage : null, QR_IMG_SIZE);
 
+        if (!design.template) continue;
+
         const templateResponse = await fetch(design.template);
         if (!templateResponse.ok) {
            toast({ variant: "destructive", title: `Error loading template for ${design.name}`, description: `Could not fetch ${design.template}` });
@@ -733,11 +735,16 @@ export default function QrArtStudio() {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Upload failed');
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Server returned an error');
+            } else {
+                throw new Error('Save failed. The server returned an unexpected response.');
+            }
         }
 
-      toast({ variant: "success", title: "Designs Saved", description: "Your designs have been saved successfully to your repository." });
+      toast({ variant: "success", title: "Designs Saved", description: "Your designs have been sent to your repository." });
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -1208,3 +1215,6 @@ export default function QrArtStudio() {
     </div>
   );
 }
+
+
+    
