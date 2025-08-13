@@ -720,20 +720,24 @@ export default function QrArtStudio() {
   const saveDesignsToServer = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch('/api/save-designs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(designs, null, 2),
-      });
+        const jsonString = JSON.stringify(designs, null, 2);
+        const designsJsonFile = new File([jsonString], 'designs.json', { type: 'application/json' });
+        
+        const formData = new FormData();
+        formData.append('folder', 'public');
+        formData.append('file1', designsJsonFile);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save designs');
-      }
+        const response = await fetch('https://git-up.onrender.com/upload', {
+            method: 'POST',
+            body: formData
+        });
 
-      toast({ variant: "success", title: "Designs Saved", description: "Your designs have been saved successfully on the server." });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Upload failed');
+        }
+
+      toast({ variant: "success", title: "Designs Saved", description: "Your designs have been saved successfully to your repository." });
     } catch (error: any) {
       toast({
         variant: "destructive",
