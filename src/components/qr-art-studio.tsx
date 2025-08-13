@@ -731,6 +731,9 @@ export default function QrArtStudio() {
 
         const response = await fetch('https://git-up.onrender.com/upload', {
             method: 'POST',
+            headers: {
+              'Accept': 'application/json'
+            },
             body: formData
         });
 
@@ -740,10 +743,13 @@ export default function QrArtStudio() {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Server returned an error');
             } else {
-                throw new Error('Save failed. The server returned an unexpected response.');
+                 const errorText = await response.text();
+                 console.error("Server returned non-JSON response:", errorText);
+                 throw new Error('Save failed. The server returned an unexpected response.');
             }
         }
 
+      const result = await response.json();
       toast({ variant: "success", title: "Designs Saved", description: "Your designs have been sent to your repository." });
     } catch (error: any) {
       toast({
@@ -1215,6 +1221,3 @@ export default function QrArtStudio() {
     </div>
   );
 }
-
-
-    
