@@ -156,10 +156,6 @@ const drawCustomQr = (qrData: QRCode.QRCode | null, design: Design, bgImage: str
         return new Promise<void>((bgResolve) => {
           ctx.clearRect(0, 0, canvasSize, canvasSize);
           
-          // Fill quiet zone first
-          ctx.fillStyle = design.backgroundColor;
-          ctx.fillRect(0, 0, canvasSize, canvasSize);
-
           if (design.transparentBg && !design.useImage) {
               ctx.clearRect(0, 0, canvasSize, canvasSize);
               bgResolve();
@@ -170,26 +166,22 @@ const drawCustomQr = (qrData: QRCode.QRCode | null, design: Design, bgImage: str
             const img = new Image();
             img.onload = () => {
               ctx.save();
-              // Clip the region where the image will be drawn (inside the padding)
-              ctx.beginPath();
-              ctx.rect(padding, padding, qrRegionSize, qrRegionSize);
-              ctx.clip();
               
               const imgAspectRatio = img.width / img.height;
-              const canvasAspectRatio = qrRegionSize / qrRegionSize;
-              let renderWidth = qrRegionSize;
-              let renderHeight = qrRegionSize;
-              let x = padding;
-              let y = padding;
+              const canvasAspectRatio = canvasSize / canvasSize;
+              let renderWidth = canvasSize;
+              let renderHeight = canvasSize;
+              let x = 0;
+              let y = 0;
 
               if (imgAspectRatio > canvasAspectRatio) {
-                renderHeight = qrRegionSize;
+                renderHeight = canvasSize;
                 renderWidth = renderHeight * imgAspectRatio;
-                x = padding + (qrRegionSize - renderWidth) / 2;
+                x = (canvasSize - renderWidth) / 2;
               } else {
-                renderWidth = qrRegionSize;
+                renderWidth = canvasSize;
                 renderHeight = renderWidth / imgAspectRatio;
-                y = padding + (qrRegionSize - renderHeight) / 2;
+                y = (canvasSize - renderHeight) / 2;
               }
               
               const filterParts = [];
@@ -211,16 +203,16 @@ const drawCustomQr = (qrData: QRCode.QRCode | null, design: Design, bgImage: str
               if (design.imageOverlayColor) {
                   ctx.globalAlpha = design.imageOverlayOpacity || 0.5;
                   ctx.fillStyle = design.imageOverlayColor;
-                  ctx.fillRect(padding, padding, qrRegionSize, qrRegionSize);
+                  ctx.fillRect(0, 0, canvasSize, canvasSize);
               }
               
-              ctx.restore(); // Restore from clipping
+              ctx.restore();
               bgResolve();
             };
             img.onerror = () => {
               // Fallback if image fails to load
               ctx.fillStyle = design.backgroundColor;
-              ctx.fillRect(padding, padding, qrRegionSize, qrRegionSize);
+              ctx.fillRect(0, 0, canvasSize, canvasSize);
               bgResolve();
             };
             img.src = bgImage;
@@ -231,9 +223,9 @@ const drawCustomQr = (qrData: QRCode.QRCode | null, design: Design, bgImage: str
               gradient.addColorStop(1, design.bgGradientEnd);
               ctx.fillStyle = gradient;
             } else {
-              // Background color is already set for quiet zone
+              ctx.fillStyle = design.backgroundColor;
             }
-            ctx.fillRect(padding, padding, qrRegionSize, qrRegionSize);
+            ctx.fillRect(0, 0, canvasSize, canvasSize);
             bgResolve();
           }
         });
@@ -329,7 +321,7 @@ const drawCustomQr = (qrData: QRCode.QRCode | null, design: Design, bgImage: str
         
         ctx.save();
         ctx.clip(pupilBgPath);
-        if (design.transparentBg && !design.useImage) { // Also check for image use
+        if (design.transparentBg) {
             ctx.clearRect(0, 0, eyeSize, eyeSize);
         } else {
             ctx.fillStyle = design.backgroundColor;
@@ -367,6 +359,16 @@ const drawCustomQr = (qrData: QRCode.QRCode | null, design: Design, bgImage: str
       }
   
       drawBackground().then(() => {
+        //Fill quiet zone with background color unless transparent or image background
+        if(!design.transparentBg && !design.useImage) {
+            ctx.fillStyle = design.backgroundColor;
+            ctx.fillRect(0, 0, canvasSize, canvasSize);
+            ctx.fillRect(0, 0, padding, canvasSize);
+            ctx.fillRect(canvasSize - padding, 0, padding, canvasSize);
+            ctx.fillRect(padding, 0, qrRegionSize, padding);
+            ctx.fillRect(padding, canvasSize - padding, qrRegionSize, padding);
+        }
+
         let pixelFillStyle: string | CanvasGradient = design.pixelColor;
         // Gradients disabled on image backgrounds for better scannability
         if (design.pixelGradientStart && design.pixelGradientEnd && !design.useImage) {
