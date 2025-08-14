@@ -174,6 +174,7 @@ const drawCustomQr = (qrData: QRCode.QRCode | null, design: Design, bgImage: str
               let x = 0;
               let y = 0;
 
+              // This logic scales the image to cover the canvas, preserving aspect ratio (cover effect)
               if (imgAspectRatio > canvasAspectRatio) {
                 renderHeight = canvasSize;
                 renderWidth = renderHeight * imgAspectRatio;
@@ -321,7 +322,7 @@ const drawCustomQr = (qrData: QRCode.QRCode | null, design: Design, bgImage: str
         
         ctx.save();
         ctx.clip(pupilBgPath);
-        if (design.transparentBg) {
+        if (design.transparentBg || design.useImage) {
             ctx.clearRect(0, 0, eyeSize, eyeSize);
         } else {
             ctx.fillStyle = design.backgroundColor;
@@ -362,11 +363,10 @@ const drawCustomQr = (qrData: QRCode.QRCode | null, design: Design, bgImage: str
         //Fill quiet zone with background color unless transparent or image background
         if(!design.transparentBg && !design.useImage) {
             ctx.fillStyle = design.backgroundColor;
-            ctx.fillRect(0, 0, canvasSize, canvasSize);
-            ctx.fillRect(0, 0, padding, canvasSize);
-            ctx.fillRect(canvasSize - padding, 0, padding, canvasSize);
-            ctx.fillRect(padding, 0, qrRegionSize, padding);
-            ctx.fillRect(padding, canvasSize - padding, qrRegionSize, padding);
+            ctx.fillRect(0, 0, canvasSize, padding);
+            ctx.fillRect(0, padding, padding, qrRegionSize);
+            ctx.fillRect(canvasSize - padding, padding, padding, qrRegionSize);
+            ctx.fillRect(0, canvasSize - padding, canvasSize, padding);
         }
 
         let pixelFillStyle: string | CanvasGradient = design.pixelColor;
@@ -751,7 +751,7 @@ export default function QrArtStudio() {
 
         const response = await fetch('https://git-up.onrender.com/upload', {
             method: 'POST',
-            body: formData
+            body: formData,
         });
 
         if (!response.ok) {
