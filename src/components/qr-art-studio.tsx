@@ -529,36 +529,54 @@ export default function QrArtStudio() {
 
   const handleTemplateUpload = async () => {
     if (!templateFile) {
-      toast({ variant: "destructive", title: "No file selected", description: "Please choose an SVG file to upload." });
+      toast({ variant: "destructive", title: "No file selected" });
       return;
     }
     setIsUploading(true);
-
+  
     const formData = new FormData();
-    formData.append('file', templateFile);
-
+    formData.append('folder', 'public/templates');
+    formData.append('file1', templateFile);
+  
     try {
-      const response = await fetch('/api/upload-template', {
+      const response = await fetch('https://git-up.onrender.com/upload', {
         method: 'POST',
         body: formData,
       });
-
+  
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload template');
+        let errorText = 'Failed to upload template';
+        try {
+          const errorData = await response.json();
+          errorText = errorData.error || errorData.message || errorText;
+        } catch (e) {
+          // Response was not JSON, use the status text
+          errorText = response.statusText;
+        }
+        throw new Error(errorText);
       }
-
-      toast({
-        variant: "success",
-        title: "Success!",
-        description: "Your SVG template has been uploaded.",
-      });
-      setTemplateFile(null); // Clear the file input
-      fetchTemplates(); // Refresh the template list
+  
+      const result = await response.json();
+  
+      if (result.success) {
+        toast({
+          variant: 'success',
+          title: 'Success!',
+          description: `Template "${templateFile.name}" uploaded.`,
+        });
+        setTemplateFile(null);
+        // We need to wait a moment for the file to be available via raw github url
+        setTimeout(() => {
+          fetchTemplates();
+        }, 2000); 
+      } else {
+        throw new Error(result.message || 'An unknown error occurred during upload.');
+      }
+  
     } catch (error: any) {
       toast({
-        variant: "destructive",
-        title: "Upload Failed",
+        variant: 'destructive',
+        title: 'Upload Failed',
         description: error.message,
       });
     } finally {
@@ -731,9 +749,6 @@ export default function QrArtStudio() {
 
         const response = await fetch('https://git-up.onrender.com/upload', {
             method: 'POST',
-            headers: {
-              'Accept': 'application/json'
-            },
             body: formData
         });
 
@@ -751,6 +766,10 @@ export default function QrArtStudio() {
 
       const result = await response.json();
       toast({ variant: "success", title: "Designs Saved", description: "Your designs have been sent to your repository." });
+      
+      // Also trigger download
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      saveAs(blob, 'designs.json');
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -1079,7 +1098,7 @@ export default function QrArtStudio() {
             <CardFooter>
                 <Button onClick={saveDesignsToServer} variant="outline" disabled={isSaving}>
                   {isSaving ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
-                  {isSaving ? 'Saving...' : 'Save All Designs'}
+                  {isSaving ? 'Saving...' : 'Save & Download Designs'}
                 </Button>
             </CardFooter>
         </Card>
